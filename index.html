@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#071426">
+<title>GHOST EAR AI — V1</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{color-scheme:dark;--bg:#071426;--panel:#0d2038;--line:#1e4164;--cyan:#28d9f2;--blue:#347cff;--muted:#a7bbcf;--text:#f4f9ff;--warn:#ffca68}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0%,#103b63 0,transparent 35%),var(--bg);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:760px;margin:auto;padding:20px 16px 42px}.brand{display:flex;align-items:center;gap:12px;margin:8px 0 20px}.logo{width:48px;height:48px;border:1px solid var(--cyan);border-radius:15px;display:grid;place-items:center;color:var(--cyan);font-size:24px;box-shadow:0 0 22px #28d9f244}
+h1{font-size:22px;letter-spacing:1.5px;margin:0}.sub{color:var(--muted);font-size:12px;letter-spacing:2px}.hero{padding:20px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(135deg,#102d4b,#0a192c);margin-bottom:16px}.hero h2{font-size:20px;margin:0 0 8px}.hero p{margin:0;color:var(--muted);line-height:1.5}
+.card{background:#0b1d32;border:1px solid var(--line);border-radius:18px;padding:17px;margin:14px 0}.card h3{font-size:16px;margin:0 0 14px}.label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}
+input,select{width:100%;background:#061426;border:1px solid #285078;border-radius:12px;color:var(--text);padding:13px;font-size:16px}
+button{border:0;border-radius:13px;padding:14px 16px;font-size:15px;font-weight:700;color:#031322;background:linear-gradient(90deg,var(--cyan),#65a8ff);width:100%;margin-top:10px}
+button.secondary{background:#173958;color:var(--text);border:1px solid #32618a}button:disabled{opacity:.45}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.status{padding:12px;border-radius:12px;background:#07172a;color:var(--muted);font-size:14px;margin-top:12px;line-height:1.45}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.metric{background:#07172a;padding:12px;border-radius:12px}.metric small{color:var(--muted);display:block}.metric strong{font-size:19px}
+.result{padding:15px;border-radius:14px;background:#102c48;border:1px solid #285078;margin-top:12px}.result.good{border-color:#1b9e83}.result.warn{border-color:#c68a32}.result strong{display:block;font-size:18px;margin-bottom:5px}
+canvas{width:100%;height:90px;background:#061426;border-radius:12px;margin-top:12px}
+footer{color:#8ea8c1;font-size:12px;line-height:1.5;margin:20px 4px}
+.pill{display:inline-block;border:1px solid #2c648c;border-radius:99px;padding:4px 9px;font-size:11px;color:var(--cyan);margin-bottom:10px}
+@media(min-width:600px){.metrics{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<main>
+  <header class="brand"><div class="logo">◉</div><div><h1>GHOST EAR AI</h1><div class="sub">ACOUSTIC MACHINE MONITORING · V1</div></div></header>
+  <section class="hero">
+    <span class="pill">PROTOTYPE EXPÉRIMENTAL</span>
+    <h2>Écouter. Comparer. Alerter.</h2>
+    <p>Crée une référence sonore pour une machine, puis compare ses prochains enregistrements pour repérer des changements acoustiques.</p>
+  </section>
+
+  <section class="card">
+    <h3>01 — Identifier la machine</h3>
+    <label class="label" for="machine">Nom ou identifiant de la machine</label>
+    <input id="machine" maxlength="50" placeholder="Ex. Pompe atelier 01">
+    <label class="label" for="category">Catégorie</label>
+    <select id="category">
+      <option>Groupe électrogène</option><option>Pompe à eau</option><option>Moteur électrique</option>
+      <option>Compresseur / réfrigération</option><option>Ventilateur</option><option>Autre machine</option>
+    </select>
+    <div class="status" id="profileStatus">Aucune référence chargée. Donne un nom à la machine.</div>
+  </section>
+
+  <section class="card">
+    <h3>02 — Enregistrer un son</h3>
+    <p style="color:var(--muted);font-size:13px;line-height:1.5">Place le téléphone à distance constante, sans le toucher. Enregistre environ 6 secondes, dans des conditions aussi semblables que possible.</p>
+    <div class="row">
+      <button id="recordBtn">● Enregistrer 6 s</button>
+      <button id="stopBtn" class="secondary" disabled>Arrêter</button>
+    </div>
+    <div class="status" id="recordStatus">Le microphone sera demandé au premier enregistrement. Autorise son accès.</div>
+    <canvas id="wave" width="700" height="120"></canvas>
+  </section>
+
+  <section class="card">
+    <h3>03 — Construire ou comparer</h3>
+    <button id="baselineBtn" class="secondary" disabled>Enregistrer comme référence normale</button>
+    <button id="analyzeBtn" disabled>Comparer avec la référence</button>
+    <div id="result" class="result" style="display:none"></div>
+  </section>
+
+  <section class="card">
+    <h3>04 — Mesures acoustiques</h3>
+    <div class="metrics">
+      <div class="metric"><small>Niveau RMS</small><strong id="rms">—</strong></div>
+      <div class="metric"><small>Pic audio</small><strong id="peak">—</strong></div>
+      <div class="metric"><small>Passages par zéro</small><strong id="zcr">—</strong></div>
+      <div class="metric"><small>Centre spectral</small><strong id="centroid">—</strong></div>
+    </div>
+    <div class="status" id="measurementNote">Les mesures apparaîtront après un enregistrement.</div>
+  </section>
+
+  <section class="card">
+    <h3>05 — Données locales</h3>
+    <p style="color:var(--muted);font-size:13px">Les références sont conservées dans le stockage de ce navigateur sur ce téléphone. Elles ne sont pas envoyées à un serveur.</p>
+    <button id="deleteBtn" class="secondary">Supprimer la référence de cette machine</button>
+  </section>
+
+  <footer>
+    <b>Important :</b> cette V1 est un démonstrateur de détection de changements acoustiques, pas un système certifié de diagnostic de panne. Le bruit dépend aussi de la distance, du téléphone, de l'environnement et de la charge de la machine. Toujours confirmer une alerte avec un technicien et des contrôles adaptés.
+  </footer>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let recorder=null, stream=null, chunks=[], lastFeatures=null, lastBuffer=null, countdown=null;
+const KEY='ghost_ear_profiles_v1';
+function profiles(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return {}}}
+function profileKey(){return ($('machine').value.trim().toLowerCase()||'').replace(/\s+/g,'_')}
+function currentProfile(){return profiles()[profileKey()]}
+function updateProfile(){
+  const name=$('machine').value.trim(), p=currentProfile();
+  $('profileStatus').textContent=!name?'Donne un nom à la machine.':p?`Référence disponible pour « ${name} » · créée le ${new Date(p.savedAt).toLocaleString('fr-FR')}`:`Aucune référence pour « ${name} ». Enregistre un son stable puis crée la référence.`;
+  $('baselineBtn').disabled=!lastFeatures||!name;
+  $('analyzeBtn').disabled=!lastFeatures||!p;
+}
+$('machine').addEventListener('input',updateProfile);
+function fmt(x){return Number.isFinite(x)?x.toFixed(3):'—'}
+function calculateFeatures(buffer){
+  const sr=buffer.sampleRate, data=buffer.getChannelData(0);
+  let sum=0,peak=0,cross=0;
+  for(let i=0;i<data.length;i++){const v=data[i];sum+=v*v;peak=Math.max(peak,Math.abs(v));if(i>0&&((data[i]>=0)!==(data[i-1]>=0)))cross++}
+  const rms=Math.sqrt(sum/data.length), zcr=cross/Math.max(1,data.length-1);
+  // Spectral centroid estimated from short 1024-sample windows using a direct DFT.
+  const N=1024, hop=2048, bins=128, window=Math.min(N,data.length);
+  let weighted=0,total=0,frames=0;
+  for(let start=0;start+window<=data.length;start+=hop){
+    for(let k=1;k<bins;k++){
+      let re=0,im=0;
+      for(let n=0;n<N;n++){
+        const x=n<window?data[start+n]*(0.5-0.5*Math.cos(2*Math.PI*n/(N-1))):0;
+        const a=2*Math.PI*k*n/N;re+=x*Math.cos(a);im-=x*Math.sin(a);
+      }
+      const mag=Math.sqrt(re*re+im*im);weighted+=(k*sr/N)*mag;total+=mag;
+    }frames++;
+  }
+  const centroid=total?weighted/total:0;
+  return {rms,peak,zcr,centroid,duration:buffer.duration,sampleRate:sr};
+}
+function showFeatures(f){
+  $('rms').textContent=fmt(f.rms);$('peak').textContent=fmt(f.peak);
+  $('zcr').textContent=(f.zcr*100).toFixed(2)+' %';$('centroid').textContent=Math.round(f.centroid)+' Hz';
+  $('measurementNote').textContent=`Durée : ${f.duration.toFixed(1)} s · Échantillonnage : ${f.sampleRate} Hz.`;
+}
+function drawWave(buffer){
+ const c=$('wave'),ctx=c.getContext('2d'),d=buffer.getChannelData(0),w=c.width,h=c.height;
+ ctx.clearRect(0,0,w,h);ctx.strokeStyle='#28d9f2';ctx.lineWidth=2;ctx.beginPath();
+ const step=Math.max(1,Math.floor(d.length/w));
+ for(let x=0;x<w;x++){let min=1,max=-1;for(let j=0;j<step;j++){const v=d[x*step+j]||0;min=Math.min(min,v);max=Math.max(max,v)}
+ ctx.moveTo(x,(1+min)*h/2);ctx.lineTo(x,(1+max)*h/2)}
+ ctx.stroke();
+}
+async function beginRecording(){
+ if(!$('machine').value.trim()){ $('recordStatus').textContent='Entre d’abord le nom de la machine.';return}
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  chunks=[];recorder=new MediaRecorder(stream);recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+  recorder.onstop=async()=>{
+    try{
+      const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});
+      const ctx=new (window.AudioContext||window.webkitAudioContext)();
+      const ab=await blob.arrayBuffer();lastBuffer=await ctx.decodeAudioData(ab);
+      lastFeatures=calculateFeatures(lastBuffer);showFeatures(lastFeatures);drawWave(lastBuffer);
+      $('recordStatus').textContent='Enregistrement analysé. Choisis « référence normale » ou « comparer ».';
+      updateProfile();await ctx.close();
+    }catch(err){$('recordStatus').textContent='Impossible de lire cet enregistrement sur ce navigateur. Essaie avec Chrome à jour.'}
+    if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  };
+  recorder.start();$('recordBtn').disabled=true;$('stopBtn').disabled=false;
+  let left=6;$('recordStatus').textContent=`Enregistrement en cours… ${left} s`;
+  countdown=setInterval(()=>{left--;if(left>0)$('recordStatus').textContent=`Enregistrement en cours… ${left} s`;else stopRecording()},1000);
+ }catch(e){$('recordStatus').textContent='Microphone indisponible. Vérifie l’autorisation et utilise une adresse HTTPS.'}
+}
+function stopRecording(){
+ if(countdown){clearInterval(countdown);countdown=null}
+ if(recorder&&recorder.state!=='inactive')recorder.stop();
+ $('recordBtn').disabled=false;$('stopBtn').disabled=true;
+}
+$('recordBtn').addEventListener('click',beginRecording);$('stopBtn').addEventListener('click',stopRecording);
+$('baselineBtn').addEventListener('click',()=>{
+ const key=profileKey();if(!key||!lastFeatures)return;
+ const p=profiles();p[key]={name:$('machine').value.trim(),category:$('category').value,features:lastFeatures,savedAt:Date.now()};
+ localStorage.setItem(KEY,JSON.stringify(p));$('result').style.display='block';$('result').className='result good';
+ $('result').innerHTML='<strong>Référence enregistrée</strong>Ce son devient la référence de comparaison de cette machine sur ce téléphone.';
+ updateProfile();
+});
+$('analyzeBtn').addEventListener('click',()=>{
+ const p=currentProfile();if(!p||!lastFeatures)return;
+ const fields=['rms','peak','zcr','centroid'];const deviations={};
+ fields.forEach(k=>{const a=p.features[k],b=lastFeatures[k];deviations[k]=Math.abs(b-a)/Math.max(Math.abs(a),k==='centroid'?100:0.005)});
+ const score=fields.reduce((s,k)=>s+Math.min(deviations[k],2),0)/fields.length;
+ const changed=fields.filter(k=>deviations[k]>.30);
+ const box=$('result');box.style.display='block';box.className='result '+(score>.30?'warn':'good');
+ const names={rms:'niveau sonore',peak:'pic audio',zcr:'passages par zéro',centroid:'centre spectral'};
+ box.innerHTML=score>.30?`<strong>Changement acoustique détecté</strong>Écart indicatif : ${(score*100).toFixed(0)} %. Mesures à vérifier : ${changed.map(k=>names[k]).join(', ')||'plusieurs caractéristiques'}.`:`<strong>Aucun écart important détecté</strong>Écart indicatif : ${(score*100).toFixed(0)} %. Cela ne garantit pas l’absence de défaut.`;
+ $('measurementNote').textContent='Comparaison avec la référence enregistrée. Refaire le test dans les mêmes conditions.';
+});
+$('deleteBtn').addEventListener('click',()=>{
+ const key=profileKey();if(!key)return;const p=profiles();delete p[key];localStorage.setItem(KEY,JSON.stringify(p));
+ $('result').style.display='none';updateProfile();$('recordStatus').textContent='Référence supprimée pour cette machine.';
+});
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+updateProfile();
+</script>
+</body></html>

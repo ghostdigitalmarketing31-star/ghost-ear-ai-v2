@@ -1,0 +1,9 @@
+{
+  "name": "GHOST EAR AI",
+  "short_name": "GHOST EAR",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#071426",
+  "theme_color": "#071426",
+  "description": "Prototype de surveillance acoustique des machines"
+}
